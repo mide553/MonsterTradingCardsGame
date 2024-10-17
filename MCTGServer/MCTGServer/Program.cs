@@ -5,7 +5,7 @@ using System.Text;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace MCTGServer
+namespace MCTG
 {
     class Program
     {
