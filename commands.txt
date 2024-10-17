@@ -1,21 +1,21 @@
-register:
+Register:
 
-curl -X POST http://localhost:10001/register --header "Content-Type: application/json" -d "{\"Username\":\"armin\", \"Password\":\"armin\"}"
-
-
-
-login:
-
-curl -X POST http://localhost:10001/login --header "Content-Type: application/json" -d "{\"Username\":\"armin\", \"Password\":\"armin\"}"
+curl -X POST http://localhost:10001/register --header "Content-Type: application/json" -d "{\"Username\":\"username\", \"Password\":\"password\"}"
 
 
 
-add card:
+Login:
 
-curl -X POST http://localhost:10001/cards --header "Content-Type: application/json" -d "{\"Name\":\"Fireball\", \"Type\":\"Spell\", \"Power\":5}"
+curl -X POST http://localhost:10001/login --header "Content-Type: application/json" -d "{\"Username\":\"username\", \"Password\":\"password\"}"
 
 
 
-get cards:
+New card:
+
+curl -X POST http://localhost:10001/cards --header "Content-Type: application/json" -d "{\"Name\":\"Fire Dragon\", \"Type\":\"Monster\", \"Power\":50}"
+
+
+
+Get cards:
 
 curl -X GET http://localhost:10001/cards
