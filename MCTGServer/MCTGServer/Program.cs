@@ -138,33 +138,4 @@ namespace MCTGServer
             stream.Write(responseBytes, 0, responseBytes.Length);
         }
     }
-
-    // User class
-    class User
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Token { get; set; } 
-
-        public User(string username, string password)
-        {
-            Username = username;
-            Password = password;
-        }
-    }
-
-    // Card class
-    class Card
-    {
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public int Power { get; set; }
-
-        public Card(string name, string type, int power)
-        {
-            Name = name;
-            Type = type;
-            Power = power;
-        }
-    }
 }
