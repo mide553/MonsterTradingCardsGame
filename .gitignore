@@ -1,0 +1,11 @@
+# Ignore .vs
+
+[Oo]bj/
+[Bb]in/
+*.user
+*.suo
+*.vs/
+*.vscode/
+*.csproj.user
+*.csproj.nuget.cache
+*.csproj.nuget.dgspec.json
