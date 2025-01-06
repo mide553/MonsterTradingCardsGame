@@ -35,6 +35,8 @@ namespace MCTG
                         string method = requestLine[0];
                         string path = requestLine[1];
 
+                        LogMessage($"Received request: {method} {path}", ConsoleColor.Yellow); // Add logging
+
                         if (method == "POST" && path == "/register")
                         {
                             HandleRegister(requestLines, stream);
@@ -70,6 +72,14 @@ namespace MCTG
                         else if (method == "GET" && path == "/stack")
                         {
                             HandleGetStack(requestLines, stream);
+                        }
+                        else if (method == "GET" && path == "/scoreboard")
+                        {
+                            HandleScoreboard(requestLines, stream);
+                        }
+                        else if (method == "GET" && path == "/profile")
+                        {
+                            HandleProfile(requestLines, stream);
                         }
                         else
                         {
@@ -143,7 +153,7 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
         user.Token = Guid.NewGuid().ToString();
         SendResponse(stream, 200, new 
         { 
-            token = user.Token,  // Token first
+            token = user.Token,
             status = "success",
             message = "Login successful!",
             username = user.Username
@@ -381,6 +391,22 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
             battleLog.AppendLine($"Rounds: {rounds}");
             battleLog.AppendLine($"Score - {user.Username}: {userWins}, {opponent.Username}: {opponentWins}");
 
+            user.GamesPlayed++;
+            opponent.GamesPlayed++;
+
+            if (winner == user.Username)
+            {
+                user.ELO += 3;
+                opponent.ELO -= 5;
+                user.Coins += 5;
+            }
+            else
+            {
+                user.ELO -= 5;
+                opponent.ELO += 3;
+                opponent.Coins += 5;
+            }
+
             SendResponse(stream, 200, new 
             { 
                 status = "success",
@@ -488,6 +514,44 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
             byte[] responseBytes = Encoding.UTF8.GetBytes(response);
             stream.Write(responseBytes, 0, responseBytes.Length);
             stream.Flush(); // Ensure the stream is flushed
+        }
+
+        private void HandleScoreboard(string[] requestLines, NetworkStream stream)
+        {
+            var sortedUsers = users.OrderByDescending(u => u.ELO).ToList();
+            SendResponse(stream, 200, new 
+            { 
+                status = "success",
+                message = "Scoreboard retrieved successfully!",
+                scoreboard = sortedUsers.Select(u => new { u.Username, u.ELO, u.GamesPlayed })
+            });
+            LogMessage("Scoreboard retrieved", ConsoleColor.Green);
+        }
+
+        private void HandleProfile(string[] requestLines, NetworkStream stream)
+        {
+            string? token = GetTokenFromHeaders(requestLines);
+            var user = users.Find(u => u.Token == token);
+
+            if (user != null)
+            {
+                SendResponse(stream, 200, new 
+                { 
+                    status = "success",
+                    message = "Profile retrieved successfully!",
+                    profile = new { user.Username, user.ELO, user.GamesPlayed, user.Coins }
+                });
+                LogMessage($"Profile retrieved for user: {user.Username}", ConsoleColor.Green);
+            }
+            else
+            {
+                SendResponse(stream, 401, new 
+                { 
+                    status = "error",
+                    message = "Invalid token!" 
+                });
+                LogMessage("Profile retrieval failed: Invalid token", ConsoleColor.Red);
+            }
         }
 
         private string? GetTokenFromHeaders(string[] requestLines)

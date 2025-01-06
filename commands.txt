@@ -52,3 +52,39 @@ curl -X POST http://localhost:10001/deck --header "Authorization: Bearer $(cat t
 # 6. Start Battle
 curl -X POST http://localhost:10001/battle --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "\"bob\""
 
+
+
+
+new test
+
+curl -X POST http://localhost:10001/register --header "Content-Type: application/json" -d "{\"Username\":\"armin\", \"Password\":\"armin\"}"
+curl -X POST http://localhost:10001/register --header "Content-Type: application/json" -d "{\"Username\":\"bob\", \"Password\":\"bob\"}"
+
+curl -X POST http://localhost:10001/login --header "Content-Type: application/json" -d "{\"Username\":\"armin\", \"Password\":\"armin\"}" | awk -F'"' '/"token"/ {print $4}' > token1.txt
+curl -X POST http://localhost:10001/login --header "Content-Type: application/json" -d "{\"Username\":\"bob\", \"Password\":\"bob\"}" | awk -F'"' '/"token"/ {print $4}' > token2.txt
+
+curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Fireball\", \"Type\":\"Spell\", \"Power\":5, \"IsSpell\":true, \"Damage\":50}"
+curl -X POST http://localhost:10001/acquire --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json"
+
+curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Dragon\", \"Type\":\"Monster\", \"Power\":7, \"IsSpell\":false, \"Damage\":70}"
+curl -X POST http://localhost:10001/acquire --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json"
+
+curl -X POST http://localhost:10001/deck --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d '[
+    {"Name":"Fireball","Type":"Spell","Power":5,"IsSpell":true,"Damage":50},
+    {"Name":"Card0","Type":"Type0","Power":0,"IsSpell":true,"Damage":0},
+    {"Name":"Card1","Type":"Type1","Power":10,"IsSpell":false,"Damage":10},
+    {"Name":"Card2","Type":"Type2","Power":20,"IsSpell":true,"Damage":20}
+]'
+curl -X POST http://localhost:10001/deck --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json" -d '[
+    {"Name":"Dragon","Type":"Monster","Power":7,"IsSpell":false,"Damage":70},
+    {"Name":"Card0","Type":"Type0","Power":0,"IsSpell":true,"Damage":0},
+    {"Name":"Card1","Type":"Type1","Power":10,"IsSpell":false,"Damage":10},
+    {"Name":"Card2","Type":"Type2","Power":20,"IsSpell":true,"Damage":20}
+]'
+
+curl -X POST http://localhost:10001/battle --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "\"bob\""
+
+curl -X GET http://localhost:10001/scoreboard
+
+curl -X GET http://localhost:10001/profile --header "Authorization: Bearer $(cat token1.txt)"
+curl -X GET http://localhost:10001/profile --header "Authorization: Bearer $(cat token2.txt)"
