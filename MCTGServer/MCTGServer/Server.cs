@@ -648,6 +648,44 @@ namespace MCTG
             }
         }
 
+        private void HandleScoreboard(string[] requestLines, NetworkStream stream)
+        {
+            var sortedUsers = users.OrderByDescending(u => u.ELO).ToList();
+            SendResponse(stream, 200, new 
+            { 
+                status = "success",
+                message = "Scoreboard retrieved successfully!",
+                scoreboard = sortedUsers.Select(u => new { u.Username, u.ELO, u.GamesPlayed })
+            });
+            LogMessage("Scoreboard retrieved", ConsoleColor.Green);
+        }
+
+        private void HandleProfile(string[] requestLines, NetworkStream stream)
+        {
+            string? token = GetTokenFromHeaders(requestLines);
+            var user = users.Find(u => u.Token == token);
+
+            if (user != null)
+            {
+                SendResponse(stream, 200, new 
+                { 
+                    status = "success",
+                    message = "Profile retrieved successfully!",
+                    profile = new { user.Username, user.ELO, user.GamesPlayed, user.Coins }
+                });
+                LogMessage($"Profile retrieved for user: {user.Username}", ConsoleColor.Green);
+            }
+            else
+            {
+                SendResponse(stream, 401, new 
+                { 
+                    status = "error",
+                    message = "Invalid token!" 
+                });
+                LogMessage("Profile retrieval failed: Invalid token", ConsoleColor.Red);
+            }
+        }
+
         private string? GetTokenFromHeaders(string[] requestLines)
         {
             foreach (var line in requestLines)
