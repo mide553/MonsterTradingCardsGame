@@ -1,14 +1,20 @@
-﻿using Newtonsoft.Json;
+﻿using System.Collections.Generic;
 
-class User
+namespace MCTG
 {
-    public string Username { get; set; }
-    public string Password { get; set; }
-    public string Token { get; set; }
-
-    public User(string username, string password)
+    public class User
     {
-        Username = username;
-        Password = password;
+        public string Username { get; set; }
+        public string Password { get; set; }
+        public string? Token { get; set; } // Marked as nullable
+        public int Coins { get; set; } = 20;
+        public List<Card> Stack { get; set; } = new List<Card>();
+        public List<Card> Deck { get; set; } = new List<Card>();
+
+        public User(string username, string password)
+        {
+            Username = username;
+            Password = password;
+        }
     }
 }
