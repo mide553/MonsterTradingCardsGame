@@ -16,5 +16,14 @@
             IsSpell = isSpell;
             Damage = damage;
         }
+
+        public bool IsGoblin => Name.Contains("Goblin", StringComparison.OrdinalIgnoreCase);
+        public bool IsDragon => Name.Contains("Dragon", StringComparison.OrdinalIgnoreCase);
+        public bool IsWizzard => Name.Contains("Wizzard", StringComparison.OrdinalIgnoreCase);
+        public bool IsOrk => Name.Contains("Ork", StringComparison.OrdinalIgnoreCase);
+        public bool IsKnight => Name.Contains("Knight", StringComparison.OrdinalIgnoreCase);
+        public bool IsKraken => Name.Contains("Kraken", StringComparison.OrdinalIgnoreCase);
+        public bool IsFireElf => Name.Contains("FireElf", StringComparison.OrdinalIgnoreCase);
+        public bool IsWaterSpell => IsSpell && Type.Equals("Water", StringComparison.OrdinalIgnoreCase);
     }
 }

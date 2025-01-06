@@ -1,54 +1,46 @@
-# 1. Start Server
+# Start Server
 dotnet run --project MCTGServer/MCTGServer/MCTG.csproj
 
 
-
-# 2. Register Users
+# 1. Register Users
 curl -X POST http://localhost:10001/register --header "Content-Type: application/json" -d "{\"Username\":\"armin\", \"Password\":\"armin\"}"
 curl -X POST http://localhost:10001/register --header "Content-Type: application/json" -d "{\"Username\":\"bob\", \"Password\":\"bob\"}"
 
-
-
-# 3. Login and Save Tokens
+# 2. Login Users
 curl -X POST http://localhost:10001/login --header "Content-Type: application/json" -d "{\"Username\":\"armin\", \"Password\":\"armin\"}" | awk -F'"' '/"token"/ {print $4}' > token1.txt
 curl -X POST http://localhost:10001/login --header "Content-Type: application/json" -d "{\"Username\":\"bob\", \"Password\":\"bob\"}" | awk -F'"' '/"token"/ {print $4}' > token2.txt
 
-
-
-# 4. Add Initial Cards and Acquire Packages
-# For User 1 (Armin)
-curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Fireball\", \"Type\":\"Spell\", \"Power\":5, \"IsSpell\":true, \"Damage\":50}"
+# 3. Add Special Cards for Armin
+curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"WaterSpell\", \"Type\":\"Water\", \"Power\":20, \"IsSpell\":true, \"Damage\":50}"
+curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Knight\", \"Type\":\"Normal\", \"Power\":30, \"IsSpell\":false, \"Damage\":35}"
 curl -X POST http://localhost:10001/acquire --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json"
 
-
-
-# For User 2 (Bob)
-curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Dragon\", \"Type\":\"Monster\", \"Power\":7, \"IsSpell\":false, \"Damage\":70}"
+# 4. Add Special Cards for Bob
+curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Dragon\", \"Type\":\"Monster\", \"Power\":25, \"IsSpell\":false, \"Damage\":70}"
+curl -X POST http://localhost:10001/cards --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json" -d "{\"Name\":\"Goblin\", \"Type\":\"Normal\", \"Power\":15, \"IsSpell\":false, \"Damage\":25}"
 curl -X POST http://localhost:10001/acquire --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json"
 
-
-
-# 5. Configure Decks
-
-# For User 1 (Armin)
+# 5. Configure Decks with Special Cards
 curl -X POST http://localhost:10001/deck --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d '[
-    {"Name":"Fireball","Type":"Spell","Power":5,"IsSpell":true,"Damage":50},
-    {"Name":"Card0","Type":"Type0","Power":0,"IsSpell":true,"Damage":0},
+    {"Name":"WaterSpell","Type":"Water","Power":20,"IsSpell":true,"Damage":50},
+    {"Name":"Knight","Type":"Normal","Power":30,"IsSpell":false,"Damage":35},
     {"Name":"Card1","Type":"Type1","Power":10,"IsSpell":false,"Damage":10},
     {"Name":"Card2","Type":"Type2","Power":20,"IsSpell":true,"Damage":20}
 ]'
 
-# For User 2 (Bob)
 curl -X POST http://localhost:10001/deck --header "Authorization: Bearer $(cat token2.txt)" --header "Content-Type: application/json" -d '[
-    {"Name":"Dragon","Type":"Monster","Power":7,"IsSpell":false,"Damage":70},
-    {"Name":"Card0","Type":"Type0","Power":0,"IsSpell":true,"Damage":0},
+    {"Name":"Dragon","Type":"Monster","Power":25,"IsSpell":false,"Damage":70},
+    {"Name":"Goblin","Type":"Normal","Power":15,"IsSpell":false,"Damage":25},
     {"Name":"Card1","Type":"Type1","Power":10,"IsSpell":false,"Damage":10},
     {"Name":"Card2","Type":"Type2","Power":20,"IsSpell":true,"Damage":20}
 ]'
-
-
-
 
 # 6. Start Battle
 curl -X POST http://localhost:10001/battle --header "Authorization: Bearer $(cat token1.txt)" --header "Content-Type: application/json" -d "\"bob\""
 
+# 7. View Results
+curl -X GET http://localhost:10001/scoreboard
+
+# 8. View Profiles
+curl -X GET http://localhost:10001/profile --header "Authorization: Bearer $(cat token1.txt)"
+curl -X GET http://localhost:10001/profile --header "Authorization: Bearer $(cat token2.txt)"

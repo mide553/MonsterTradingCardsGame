@@ -11,6 +11,7 @@ namespace MCTG
     {
         private List<User> users = new List<User>();
         private List<Card> cards = new List<Card>();
+        private List<Trade> trades = new List<Trade>(); // Add trades list
 
         public void Start()
         {
@@ -34,6 +35,8 @@ namespace MCTG
                     {
                         string method = requestLine[0];
                         string path = requestLine[1];
+
+                        LogMessage($"Received request: {method} {path}", ConsoleColor.Yellow); // Add logging
 
                         if (method == "POST" && path == "/register")
                         {
@@ -70,6 +73,14 @@ namespace MCTG
                         else if (method == "GET" && path == "/stack")
                         {
                             HandleGetStack(requestLines, stream);
+                        }
+                        else if (method == "GET" && path == "/scoreboard")
+                        {
+                            HandleScoreboard(requestLines, stream);
+                        }
+                        else if (method == "GET" && path == "/profile")
+                        {
+                            HandleProfile(requestLines, stream);
                         }
                         else
                         {
@@ -143,7 +154,7 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
         user.Token = Guid.NewGuid().ToString();
         SendResponse(stream, 200, new 
         { 
-            token = user.Token,  // Token first
+            token = user.Token,
             status = "success",
             message = "Login successful!",
             username = user.Username
@@ -287,17 +298,31 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
                 return;
             }
 
+            // Change comparison to check card properties instead of just name
             bool cardsInStack = deck.All(card => 
                 user.Stack.Any(stackCard => 
-                    stackCard.Name.Equals(card.Name, StringComparison.OrdinalIgnoreCase)));
+                    stackCard.Name == card.Name &&
+                    stackCard.Type == card.Type &&
+                    stackCard.Power == card.Power &&
+                    stackCard.IsSpell == card.IsSpell &&
+                    stackCard.Damage == card.Damage));
 
             if (cardsInStack)
             {
-                user.Deck = deck;
+                // Get the actual cards from stack
+                var actualDeck = deck.Select(card => 
+                    user.Stack.First(stackCard => 
+                        stackCard.Name == card.Name &&
+                        stackCard.Type == card.Type &&
+                        stackCard.Power == card.Power &&
+                        stackCard.IsSpell == card.IsSpell &&
+                        stackCard.Damage == card.Damage)).ToList();
+
+                user.Deck = actualDeck;
                 SendResponse(stream, 200, new { 
                     status = "success",
                     message = "Deck updated successfully!",
-                    deck = deck
+                    deck = actualDeck
                 });
                 LogMessage($"Deck updated for user: {user.Username}", ConsoleColor.Green);
             }
@@ -350,6 +375,16 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
                 battleLog.AppendLine($"{user.Username}: {userCard.Name} ({userCard.Damage} dmg)");
                 battleLog.AppendLine($"{opponent.Username}: {opponentCard.Name} ({opponentCard.Damage} dmg)");
 
+                // Add special interaction messages
+                if (userCard.IsWaterSpell && opponentCard.IsKnight)
+                    battleLog.AppendLine($"Special: {opponentCard.Name} drowns instantly against {userCard.Name}!");
+                else if (opponentCard.IsWaterSpell && userCard.IsKnight)
+                    battleLog.AppendLine($"Special: {userCard.Name} drowns instantly against {opponentCard.Name}!");
+                else if (userCard.IsGoblin && opponentCard.IsDragon)
+                    battleLog.AppendLine($"Special: {userCard.Name} is too afraid to attack {opponentCard.Name}!");
+                else if (opponentCard.IsGoblin && userCard.IsDragon)
+                    battleLog.AppendLine($"Special: {opponentCard.Name} is too afraid to attack {userCard.Name}!");
+
                 int userDamage = CalculateDamage(userCard, opponentCard);
                 int opponentDamage = CalculateDamage(opponentCard, userCard);
 
@@ -380,6 +415,22 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
             battleLog.AppendLine($"Winner: {winner}");
             battleLog.AppendLine($"Rounds: {rounds}");
             battleLog.AppendLine($"Score - {user.Username}: {userWins}, {opponent.Username}: {opponentWins}");
+
+            user.GamesPlayed++;
+            opponent.GamesPlayed++;
+
+            if (winner == user.Username)
+            {
+                user.ELO += 3;
+                opponent.ELO -= 5;
+                user.Coins += 5;
+            }
+            else
+            {
+                user.ELO -= 5;
+                opponent.ELO += 3;
+                opponent.Coins += 5;
+            }
 
             SendResponse(stream, 200, new 
             { 
@@ -432,6 +483,27 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
 
         if (tradeRequest != null)
         {
+            // Check if card is in deck
+            var cardToTrade = user.Stack.Find(c => c.Name == tradeRequest.CardName);
+            if (cardToTrade == null || user.Deck.Any(c => c.Name == tradeRequest.CardName))
+            {
+                SendResponse(stream, 400, new 
+                { 
+                    status = "error",
+                    message = "Card not available or is in deck"
+                });
+                return;
+            }
+
+            // Lock card for trading
+            user.Stack.Remove(cardToTrade);
+            trades.Add(new Trade 
+            { 
+                CardOffered = cardToTrade,
+                RequirementType = tradeRequest.Requirement,
+                OwnerUsername = user.Username
+            });
+
             SendResponse(stream, 200, new 
             { 
                 status = "success",
@@ -490,6 +562,44 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
             stream.Flush(); // Ensure the stream is flushed
         }
 
+        private void HandleScoreboard(string[] requestLines, NetworkStream stream)
+        {
+            var sortedUsers = users.OrderByDescending(u => u.ELO).ToList();
+            SendResponse(stream, 200, new 
+            { 
+                status = "success",
+                message = "Scoreboard retrieved successfully!",
+                scoreboard = sortedUsers.Select(u => new { u.Username, u.ELO, u.GamesPlayed })
+            });
+            LogMessage("Scoreboard retrieved", ConsoleColor.Green);
+        }
+
+        private void HandleProfile(string[] requestLines, NetworkStream stream)
+        {
+            string? token = GetTokenFromHeaders(requestLines);
+            var user = users.Find(u => u.Token == token);
+
+            if (user != null)
+            {
+                SendResponse(stream, 200, new 
+                { 
+                    status = "success",
+                    message = "Profile retrieved successfully!",
+                    profile = new { user.Username, user.ELO, user.GamesPlayed, user.Coins }
+                });
+                LogMessage($"Profile retrieved for user: {user.Username}", ConsoleColor.Green);
+            }
+            else
+            {
+                SendResponse(stream, 401, new 
+                { 
+                    status = "error",
+                    message = "Invalid token!" 
+                });
+                LogMessage("Profile retrieval failed: Invalid token", ConsoleColor.Red);
+            }
+        }
+
         private string? GetTokenFromHeaders(string[] requestLines)
         {
             foreach (var line in requestLines)
@@ -514,33 +624,40 @@ private void SendResponse(NetworkStream stream, int statusCode, object content)
 
         private int CalculateDamage(Card attacker, Card defender)
         {
-            if (attacker.IsSpell && defender.IsSpell)
+            // Special rules
+            if (attacker.IsGoblin && defender.IsDragon)
+                return 0; // Goblins are too afraid of Dragons
+            
+            if (defender.IsWizzard && attacker.IsOrk)
+                return 0; // Wizzard controls Orks
+            
+            if (defender.IsKnight && attacker.IsWaterSpell)
+                return int.MaxValue; // Knights drown instantly against WaterSpells
+            
+            if (defender.IsKraken && attacker.IsSpell)
+                return 0; // Kraken is immune against spells
+            
+            if (defender.IsDragon && attacker.IsFireElf)
+                return 0; // FireElves evade Dragon attacks
+
+            // Element type effectiveness
+            if (attacker.IsSpell || defender.IsSpell)
             {
                 if (attacker.Type == "Water" && defender.Type == "Fire")
-                {
                     return attacker.Damage * 2;
-                }
                 else if (attacker.Type == "Fire" && defender.Type == "Water")
-                {
                     return attacker.Damage / 2;
-                }
                 else if (attacker.Type == "Fire" && defender.Type == "Normal")
-                {
                     return attacker.Damage * 2;
-                }
                 else if (attacker.Type == "Normal" && defender.Type == "Fire")
-                {
                     return attacker.Damage / 2;
-                }
                 else if (attacker.Type == "Normal" && defender.Type == "Water")
-                {
                     return attacker.Damage * 2;
-                }
                 else if (attacker.Type == "Water" && defender.Type == "Normal")
-                {
                     return attacker.Damage / 2;
-                }
             }
+
+            // Pure monster fight or no element effectiveness
             return attacker.Damage;
         }
     }
