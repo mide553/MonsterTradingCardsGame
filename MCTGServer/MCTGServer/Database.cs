@@ -220,7 +220,6 @@ namespace MCTG
 
             try
             {
-                // Delete old deck cards first to avoid foreign key constraint violations
                 using (var cmd = new NpgsqlCommand(@"
                     DELETE FROM deck_cards WHERE username = @username", conn))
                 {
@@ -228,7 +227,6 @@ namespace MCTG
                     cmd.ExecuteNonQuery();
                 }
 
-                // Delete old cards
                 using (var cmd = new NpgsqlCommand(@"
                     DELETE FROM cards WHERE owner_username = @username", conn))
                 {
@@ -236,7 +234,6 @@ namespace MCTG
                     cmd.ExecuteNonQuery();
                 }
 
-                // Insert new cards
                 foreach (var card in stack)
                 {
                     SaveCard(card, username);
@@ -259,13 +256,11 @@ namespace MCTG
 
             try
             {
-                // Ensure all cards are saved to the cards table
                 foreach (var card in deck)
                 {
                     SaveCard(card, username);
                 }
 
-                // Delete old deck
                 using (var cmd = new NpgsqlCommand(@"
                     DELETE FROM deck_cards WHERE username = @username", conn))
                 {
@@ -273,7 +268,6 @@ namespace MCTG
                     cmd.ExecuteNonQuery();
                 }
 
-                // Insert new deck
                 foreach (var card in deck)
                 {
                     using var cmd = new NpgsqlCommand(@"

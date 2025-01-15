@@ -12,12 +12,12 @@ namespace MCTG
         private readonly Database db;
         private List<User> users = new List<User>();
         private List<Card> cards = new List<Card>();
-        private List<Trade> trades = new List<Trade>(); // List to store trades
+        private List<Trade> trades = new List<Trade>();
 
         public Server()
         {
             db = new Database();
-            users = db.GetAllUsers(); // Load all users from the database
+            users = db.GetAllUsers();
         }
 
         public void Start()
@@ -43,9 +43,8 @@ namespace MCTG
                         string method = requestLine[0];
                         string path = requestLine[1];
 
-                        LogMessage($"Received request: {method} {path}", ConsoleColor.Yellow); // Log the request
+                        LogMessage($"Received request: {method} {path}", ConsoleColor.Yellow);
 
-                        // Handle different paths
                         if (method == "POST" && path == "/register")
                         {
                             HandleRegister(requestLines, stream);
@@ -139,7 +138,7 @@ namespace MCTG
             if (user != null)
             {
                 db.SaveUser(user);
-                users = db.GetAllUsers(); // Update users list
+                users = db.GetAllUsers();
                 SendResponse(stream, 201, new 
                 { 
                     status = "success",
@@ -162,7 +161,7 @@ namespace MCTG
             {
                 user.Token = Guid.NewGuid().ToString();
                 db.SaveUser(user);
-                users = db.GetAllUsers(); // Update users list
+                users = db.GetAllUsers();
                 SendResponse(stream, 200, new 
                 { 
                     token = user.Token,
@@ -264,6 +263,8 @@ namespace MCTG
                 var package = GeneratePackage();
                 user.Stack.AddRange(package);
 
+                db.SaveUser(user);
+
                 foreach (var card in package)
                 {
                     db.SaveCard(card, user.Username);
@@ -273,9 +274,10 @@ namespace MCTG
                 { 
                     status = "success",
                     message = "Package acquired successfully!",
-                    package = package
+                    package = package,
+                    remainingCoins = user.Coins 
                 });
-                LogMessage($"Package acquired by user: {user.Username}", ConsoleColor.Green);
+                LogMessage($"Package acquired by user: {user.Username} (Coins remaining: {user.Coins})", ConsoleColor.Green);
             }
             else
             {
@@ -383,6 +385,9 @@ namespace MCTG
                         if (opponent.Deck.Count == 4)
                         {
                             var battleLog = new StringBuilder();
+                            battleLog.AppendLine($"=== Battle: {user.Username} vs {opponent.Username} ===");
+                            battleLog.AppendLine();
+
                             var userDeck = new List<Card>(user.Deck);
                             var opponentDeck = new List<Card>(opponent.Deck);
                             var random = new Random();
@@ -432,7 +437,8 @@ namespace MCTG
                                 {
                                     battleLog.AppendLine("Result: Draw!\n");
                                 }
-
+                                
+                                battleLog.AppendLine();
                                 rounds++;
                             }
 
@@ -516,6 +522,42 @@ namespace MCTG
                 });
                 LogMessage("Battle failed: Invalid token", ConsoleColor.Red);
             }
+        }
+
+        private int CalculateDamage(Card attacker, Card defender)
+        {
+            if (attacker.IsGoblin && defender.IsDragon)
+                return 0;
+            
+            if (defender.IsWizzard && attacker.IsOrk)
+                return 0;
+            
+            if (defender.IsKnight && attacker.IsWaterSpell)
+                return int.MaxValue;
+            
+            if (defender.IsKraken && attacker.IsSpell)
+                return 0;
+            
+            if (defender.IsDragon && attacker.IsFireElf)
+                return 0;
+
+            if (attacker.IsSpell || defender.IsSpell)
+            {
+                if (attacker.Type == "Water" && defender.Type == "Fire")
+                    return attacker.Damage * 2;
+                else if (attacker.Type == "Fire" && defender.Type == "Water")
+                    return attacker.Damage / 2;
+                else if (attacker.Type == "Fire" && defender.Type == "Normal")
+                    return attacker.Damage * 2;
+                else if (attacker.Type == "Normal" && defender.Type == "Fire")
+                    return attacker.Damage / 2;
+                else if (attacker.Type == "Normal" && defender.Type == "Water")
+                    return attacker.Damage * 2;
+                else if (attacker.Type == "Water" && defender.Type == "Normal")
+                    return attacker.Damage / 2;
+            }
+
+            return attacker.Damage;
         }
 
         private void HandleTrade(string[] requestLines, NetworkStream stream)
@@ -668,42 +710,6 @@ namespace MCTG
                 package.Add(new Card("Card" + i, "Type" + i, i * 10, i % 2 == 0, i * 10));
             }
             return package;
-        }
-
-        private int CalculateDamage(Card attacker, Card defender)
-        {
-            if (attacker.IsGoblin && defender.IsDragon)
-                return 0; // Goblins are too afraid of Dragons
-            
-            if (defender.IsWizzard && attacker.IsOrk)
-                return 0; // Wizzard controls Orks
-            
-            if (defender.IsKnight && attacker.IsWaterSpell)
-                return int.MaxValue; // Knights drown instantly against WaterSpells
-            
-            if (defender.IsKraken && attacker.IsSpell)
-                return 0; // Kraken is immune against spells
-            
-            if (defender.IsDragon && attacker.IsFireElf)
-                return 0; // FireElves evade Dragon attacks
-
-            if (attacker.IsSpell || defender.IsSpell)
-            {
-                if (attacker.Type == "Water" && defender.Type == "Fire")
-                    return attacker.Damage * 2;
-                else if (attacker.Type == "Fire" && defender.Type == "Water")
-                    return attacker.Damage / 2;
-                else if (attacker.Type == "Fire" && defender.Type == "Normal")
-                    return attacker.Damage * 2;
-                else if (attacker.Type == "Normal" && defender.Type == "Fire")
-                    return attacker.Damage / 2;
-                else if (attacker.Type == "Normal" && defender.Type == "Water")
-                    return attacker.Damage * 2;
-                else if (attacker.Type == "Water" && defender.Type == "Normal")
-                    return attacker.Damage / 2;
-            }
-
-            return attacker.Damage;
         }
     }
 }
