@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace MCTG
 {
@@ -7,7 +8,8 @@ namespace MCTG
         static void Main(string[] args)
         {
             Server server = new Server();
-            server.Start();
+            Thread serverThread = new Thread(new ThreadStart(server.Start));
+            serverThread.Start();
         }
     }
 }

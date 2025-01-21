@@ -9,7 +9,7 @@ namespace MCTG
 {
     public class Server
     {
-        private readonly Database db;
+        public readonly Database db;
         private List<User> users = new List<User>();
         private List<Card> cards = new List<Card>();
         private List<Trade> trades = new List<Trade>();
@@ -100,7 +100,7 @@ namespace MCTG
             }
         }
 
-        private void LogMessage(string message, ConsoleColor color = ConsoleColor.White)
+        public void LogMessage(string message, ConsoleColor color = ConsoleColor.White)
         {
             var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             Console.ForegroundColor = color;
@@ -108,7 +108,7 @@ namespace MCTG
             Console.ResetColor();
         }
 
-        private void SendResponse(NetworkStream stream, int statusCode, object content)
+        public void SendResponse(Stream stream, int statusCode, object content)
         {
             string statusText = statusCode switch
             {
@@ -129,7 +129,7 @@ namespace MCTG
             stream.Flush();
         }
 
-        private void HandleRegister(string[] requestLines, NetworkStream stream)
+        public void HandleRegister(string[] requestLines, Stream stream)
         {
             LogMessage("Register request received", ConsoleColor.Cyan);
 
@@ -149,7 +149,7 @@ namespace MCTG
             }
         }
 
-        private void HandleLogin(string[] requestLines, NetworkStream stream)
+        public void HandleLogin(string[] requestLines, Stream stream)
         {
             LogMessage("Login request received", ConsoleColor.Cyan);
 
@@ -182,7 +182,7 @@ namespace MCTG
             }
         }
 
-        private void HandleAddCard(string[] requestLines, NetworkStream stream)
+        public void HandleAddCard(string[] requestLines, Stream stream)
         {
             LogMessage("Add card request received", ConsoleColor.Cyan);
 
@@ -222,7 +222,7 @@ namespace MCTG
             }
         }
 
-        private void HandleGetCards(string[] requestLines, NetworkStream stream)
+        public void HandleGetCards(string[] requestLines, Stream stream)
         {
             LogMessage("Get cards request received", ConsoleColor.Cyan);
 
@@ -250,7 +250,7 @@ namespace MCTG
             }
         }
 
-        private void HandleAcquirePackage(string[] requestLines, NetworkStream stream)
+        public void HandleAcquirePackage(string[] requestLines, Stream stream)
         {
             LogMessage("Acquire package request received", ConsoleColor.Cyan);
 
@@ -290,7 +290,7 @@ namespace MCTG
             }
         }
 
-        private void HandleManageDeck(string[] requestLines, NetworkStream stream)
+        public void HandleManageDeck(string[] requestLines, Stream stream)
         {
             LogMessage("Manage deck request received", ConsoleColor.Cyan);
 
@@ -361,7 +361,7 @@ namespace MCTG
             }
         }
 
-        private void HandleBattle(string[] requestLines, NetworkStream stream)
+        public void HandleBattle(string[] requestLines, Stream stream)
         {
             LogMessage("Battle request received", ConsoleColor.Cyan);
 
@@ -524,7 +524,7 @@ namespace MCTG
             }
         }
 
-        private int CalculateDamage(Card attacker, Card defender)
+        public int CalculateDamage(Card attacker, Card defender)
         {
             if (attacker.IsGoblin && defender.IsDragon)
                 return 0;
@@ -560,7 +560,7 @@ namespace MCTG
             return attacker.Damage;
         }
 
-        private void HandleTrade(string[] requestLines, NetworkStream stream)
+        public void HandleTrade(string[] requestLines, Stream stream)
         {
             LogMessage("Trade request received", ConsoleColor.Cyan);
 
@@ -622,7 +622,7 @@ namespace MCTG
             }
         }
 
-        private void HandleGetStack(string[] requestLines, NetworkStream stream)
+        public void HandleGetStack(string[] requestLines, Stream stream)
         {
             string? token = GetTokenFromHeaders(requestLines);
             var user = db.GetUserByToken(token ?? "");
@@ -644,7 +644,7 @@ namespace MCTG
             }
         }
 
-        private void HandleNotFound(NetworkStream stream)
+        public void HandleNotFound(Stream stream)
         {
             string response = "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\n\r\n" + JsonConvert.SerializeObject(new { message = "Endpoint not found!" });
             byte[] responseBytes = Encoding.UTF8.GetBytes(response);
@@ -652,7 +652,7 @@ namespace MCTG
             stream.Flush();
         }
 
-        private void HandleScoreboard(string[] requestLines, NetworkStream stream)
+        public void HandleScoreboard(string[] requestLines, Stream stream)
         {
             var sortedUsers = db.GetAllUsers().OrderByDescending(u => u.ELO).ToList();
             SendResponse(stream, 200, new 
@@ -664,7 +664,7 @@ namespace MCTG
             LogMessage("Scoreboard retrieved", ConsoleColor.Green);
         }
 
-        private void HandleProfile(string[] requestLines, NetworkStream stream)
+        public void HandleProfile(string[] requestLines, Stream stream)
         {
             string? token = GetTokenFromHeaders(requestLines);
             var user = db.GetUserByToken(token ?? "");
@@ -690,7 +690,7 @@ namespace MCTG
             }
         }
 
-        private string? GetTokenFromHeaders(string[] requestLines)
+        public string? GetTokenFromHeaders(string[] requestLines)
         {
             foreach (var line in requestLines)
             {
@@ -702,7 +702,7 @@ namespace MCTG
             return null;
         }
 
-        private List<Card> GeneratePackage()
+        public List<Card> GeneratePackage()
         {
             var package = new List<Card>();
             for (int i = 0; i < 5; i++)
